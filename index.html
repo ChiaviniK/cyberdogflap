@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberDog Flap - Cyberpunk Robotic Dog Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Press+Start+2P&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Orbitron', sans-serif;
+            background-color: #0a0a1a;
+            color: #00ff9d;
+        }
+        
+        #gameCanvas {
+            display: block;
+            background-color: #12122a;
+        }
+        
+        .cyberpunk-text {
+            text-shadow: 0 0 5px #00ff9d, 0 0 10px #00ff9d;
+        }
+        
+        .neon-border {
+            border: 2px solid #00ff9d;
+            box-shadow: 0 0 10px #00ff9d, inset 0 0 10px #00ff9d;
+        }
+        
+        .pixelated {
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        
+        @keyframes neon-pulse {
+            0% { opacity: 0.8; }
+            50% { opacity: 1; }
+            100% { opacity: 0.8; }
+        }
+        
+        .neon-pulse {
+            animation: neon-pulse 2s infinite;
+        }
+        
+        #startScreen, #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(10, 10, 26, 0.8);
+            z-index: 10;
+        }
+        
+        #gameOverScreen {
+            display: none;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+    <div class="relative">
+        <canvas id="gameCanvas" width="400" height="600" class="neon-border"></canvas>
+        
+        <!-- Start Screen -->
+        <div id="startScreen" class="neon-pulse">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6 cyberpunk-text">CYBERDOG FLAP</h1>
+            <div class="mb-8">
+                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzAwMDAwMCIvPjxwYXRoIGQ9Ik0zMCwzMCBMNzAsMzAgTDcwLDcwIEwzMCw3MCBaIiBmaWxsPSJub25lIiBzdHJva2U9IiMwMGZmOWQiIHN0cm9rZS13aWR0aD0iNSIvPjxwYXRoIGQ9Ik00MCw0MCBMNjAsNDAgTDYwLDYwIEw0MCw2MCBaIiBmaWxsPSIjMDBmZjlkIi8+PHBhdGggZD0iTTMwLDMwIEw0MCw0MCBNNzAsMzAgTDYwLDQwIE0zMCw3MCBMNDAsNjAgTTcwLDcwIEw2MCw2MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDBmZjlkIiBzdHJva2Utd2lkdGg9IjMiLz48Y2lyY2xlIGN4PSIzNSIgY3k9IjIwIiByPSI1IiBmaWxsPSIjMDBmZjlkIi8+PGNpcmNsZSBjeD0iNjUiIGN5PSIyMCIgcj0iNSIgZmlsbD0iIzAwZmY5ZCIvPjxwYXRoIGQ9Ik00MCw0MCBMNDUsMzUgTTYwLDQwIEw1NSwzNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDBmZjlkIiBzdHJva2Utd2lkdGg9IjIiLz48L3N2Zz4=" 
+                     alt="Cyber Dog" class="w-32 h-32 pixelated mb-6">
+            </div>
+            <p class="text-xl mb-8 cyberpunk-text">Navigate through neon obstacles</p>
+            <button id="startButton" class="px-8 py-3 bg-transparent border-2 border-cyan-400 text-cyan-400 text-xl font-bold hover:bg-cyan-400 hover:text-black transition-all duration-300 neon-pulse">
+                START GAME
+            </button>
+            <div class="mt-8 text-sm cyberpunk-text">
+                <p>Press SPACE or CLICK to jump</p>
+            </div>
+        </div>
+        
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6 cyberpunk-text">GAME OVER</h1>
+            <p class="text-2xl mb-4 cyberpunk-text">Score: <span id="finalScore">0</span></p>
+            <p class="text-xl mb-8 cyberpunk-text">High Score: <span id="highScore">0</span></p>
+            <button id="restartButton" class="px-8 py-3 bg-transparent border-2 border-cyan-400 text-cyan-400 text-xl font-bold hover:bg-cyan-400 hover:text-black transition-all duration-300 neon-pulse">
+                TRY AGAIN
+            </button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const startScreen = document.getElementById('startScreen');
+            const gameOverScreen = document.getElementById('gameOverScreen');
+            const startButton = document.getElementById('startButton');
+            const restartButton = document.getElementById('restartButton');
+            const finalScoreDisplay = document.getElementById('finalScore');
+            const highScoreDisplay = document.getElementById('highScore');
+            
+            // Game variables
+            let gameRunning = false;
+            let score = 0;
+            let highScore = localStorage.getItem('cyberdogHighScore') || 0;
+            highScoreDisplay.textContent = highScore;
+            
+            // Dog variables
+            const dog = {
+                x: 100,
+                y: canvas.height / 2,
+                width: 40,
+                height: 30,
+                velocity: 0,
+                gravity: 0.5,
+                jumpForce: -10,
+                color: '#00ff9d'
+            };
+            
+            // Pipes variables
+            const pipes = [];
+            const pipeWidth = 60;
+            const pipeGap = 150;
+            let pipeTimer = 0;
+            const pipeInterval = 1500; // milliseconds
+            let lastPipeTime = 0;
+            
+            // Background elements
+            const buildings = [];
+            const stars = [];
+            
+            // Create background buildings
+            for (let i = 0; i < 10; i++) {
+                buildings.push({
+                    x: i * 200,
+                    width: 150,
+                    height: Math.random() * 200 + 100,
+                    color: `hsl(${Math.random() * 30 + 220}, 80%, 30%)`
+                });
+            }
+            
+            // Create stars
+            for (let i = 0; i < 100; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2 + 1,
+                    brightness: Math.random() * 0.5 + 0.5
+                });
+            }
+            
+            // Event listeners
+            startButton.addEventListener('click', startGame);
+            restartButton.addEventListener('click', startGame);
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'Space' && gameRunning) {
+                    dog.velocity = dog.jumpForce;
+                } else if (e.code === 'Space' && !gameRunning && startScreen.style.display === 'none') {
+                    startGame();
+                }
+            });
+            
+            canvas.addEventListener('click', () => {
+                if (gameRunning) {
+                    dog.velocity = dog.jumpForce;
+                }
+            });
+            
+            // Start game function
+            function startGame() {
+                gameRunning = true;
+                score = 0;
+                dog.y = canvas.height / 2;
+                dog.velocity = 0;
+                pipes.length = 0;
+                lastPipeTime = 0;
+                startScreen.style.display = 'none';
+                gameOverScreen.style.display = 'none';
+                requestAnimationFrame(gameLoop);
+            }
+            
+            // Game loop
+            function gameLoop(timestamp) {
+                if (!gameRunning) return;
+                
+                update(timestamp);
+                render();
+                
+                requestAnimationFrame(gameLoop);
+            }
+            
+            // Update game state
+            function update(timestamp) {
+                // Update dog
+                dog.velocity += dog.gravity;
+                dog.y += dog.velocity;
+                
+                // Check for collisions with ground or ceiling
+                if (dog.y + dog.height > canvas.height || dog.y < 0) {
+                    gameOver();
+                }
+                
+                // Generate pipes
+                if (timestamp - lastPipeTime > pipeInterval) {
+                    const pipeHeight = Math.random() * (canvas.height - pipeGap - 200) + 100;
+                    pipes.push({
+                        x: canvas.width,
+                        topHeight: pipeHeight,
+                        bottomY: pipeHeight + pipeGap,
+                        passed: false,
+                        color: `hsl(${Math.random() * 60 + 200}, 80%, 50%)`
+                    });
+                    lastPipeTime = timestamp;
+                }
+                
+                // Update pipes
+                for (let i = pipes.length - 1; i >= 0; i--) {
+                    pipes[i].x -= 3;
+                    
+                    // Check for collisions with pipes
+                    if (
+                        dog.x + dog.width > pipes[i].x &&
+                        dog.x < pipes[i].x + pipeWidth &&
+                        (dog.y < pipes[i].topHeight || dog.y + dog.height > pipes[i].bottomY)
+                    ) {
+                        gameOver();
+                    }
+                    
+                    // Check if pipe has been passed
+                    if (!pipes[i].passed && dog.x > pipes[i].x + pipeWidth) {
+                        pipes[i].passed = true;
+                        score++;
+                        if (score > highScore) {
+                            highScore = score;
+                            localStorage.setItem('cyberdogHighScore', highScore);
+                            highScoreDisplay.textContent = highScore;
+                        }
+                    }
+                    
+                    // Remove pipes that are off screen
+                    if (pipes[i].x + pipeWidth < 0) {
+                        pipes.splice(i, 1);
+                    }
+                }
+                
+                // Update background buildings
+                for (let building of buildings) {
+                    building.x -= 1;
+                    if (building.x + building.width < 0) {
+                        building.x = canvas.width;
+                        building.height = Math.random() * 200 + 100;
+                    }
+                }
+            }
+            
+            // Render game
+            function render() {
+                // Clear canvas
+                ctx.fillStyle = '#12122a';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw stars
+                ctx.save();
+                for (let star of stars) {
+                    ctx.fillStyle = `rgba(0, 255, 157, ${star.brightness})`;
+                    ctx.fillRect(star.x, star.y, star.size, star.size);
+                }
+                ctx.restore();
+                
+                // Draw buildings
+                for (let building of buildings) {
+                    // Building
+                    ctx.fillStyle = building.color;
+                    ctx.fillRect(building.x, canvas.height - building.height, building.width, building.height);
+                    
+                    // Windows
+                    ctx.fillStyle = '#00ff9d';
+                    const windowSize = 10;
+                    const windowGap = 15;
+                    const windowsX = Math.floor(building.width / (windowSize + windowGap));
+                    const windowsY = Math.floor(building.height / (windowSize + windowGap));
+                    
+                    for (let i = 0; i < windowsX; i++) {
+                        for (let j = 0; j < windowsY; j++) {
+                            if (Math.random() > 0.3) { // Randomly turn some windows off
+                                ctx.fillRect(
+                                    building.x + i * (windowSize + windowGap) + windowGap,
+                                    canvas.height - building.height + j * (windowSize + windowGap) + windowGap,
+                                    windowSize,
+                                    windowSize
+                                );
+                            }
+                        }
+                    }
+                }
+                
+                // Draw pipes
+                for (let pipe of pipes) {
+                    // Top pipe
+                    ctx.fillStyle = pipe.color;
+                    ctx.fillRect(pipe.x, 0, pipeWidth, pipe.topHeight);
+                    
+                    // Bottom pipe
+                    ctx.fillRect(pipe.x, pipe.bottomY, pipeWidth, canvas.height - pipe.bottomY);
+                    
+                    // Pipe edges (neon effect)
+                    ctx.strokeStyle = '#00ff9d';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(pipe.x, 0, pipeWidth, pipe.topHeight);
+                    ctx.strokeRect(pipe.x, pipe.bottomY, pipeWidth, canvas.height - pipe.bottomY);
+                }
+                
+                // Draw dog (cybernetic dog)
+                ctx.save();
+                ctx.fillStyle = dog.color;
+                
+                // Body
+                ctx.fillRect(dog.x, dog.y, dog.width, dog.height);
+                
+                // Head
+                ctx.beginPath();
+                ctx.arc(dog.x + dog.width, dog.y + dog.height / 2, dog.height / 2, Math.PI / 2, Math.PI * 1.5);
+                ctx.fill();
+                
+                // Eyes (glowing)
+                ctx.fillStyle = '#00ff9d';
+                ctx.beginPath();
+                ctx.arc(dog.x + dog.width - 5, dog.y + dog.height / 2 - 5, 3, 0, Math.PI * 2);
+                ctx.arc(dog.x + dog.width - 5, dog.y + dog.height / 2 + 5, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Glow effect
+                ctx.shadowColor = '#00ff9d';
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = 'rgba(0, 255, 157, 0.3)';
+                ctx.fillRect(dog.x, dog.y, dog.width, dog.height);
+                ctx.beginPath();
+                ctx.arc(dog.x + dog.width, dog.y + dog.height / 2, dog.height / 2, Math.PI / 2, Math.PI * 1.5);
+                ctx.fill();
+                
+                // Legs (mechanical)
+                ctx.fillStyle = '#00ff9d';
+                for (let i = 0; i < 3; i++) {
+                    ctx.fillRect(dog.x + 5 + i * 10, dog.y + dog.height, 5, 10);
+                }
+                
+                ctx.restore();
+                
+                // Draw score
+                ctx.fillStyle = '#00ff9d';
+                ctx.font = '24px Orbitron';
+                ctx.textAlign = 'center';
+                ctx.fillText(score.toString(), canvas.width / 2, 50);
+            }
+            
+            // Game over function
+            function gameOver() {
+                gameRunning = false;
+                finalScoreDisplay.textContent = score;
+                gameOverScreen.style.display = 'flex';
+            }
+            
+            // Initial render
+            render();
+        });
+    </script>
+</body>
+</html>
